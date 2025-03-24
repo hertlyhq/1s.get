@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  1s:
+    image: docker
+    network_mode: bridge
+    restart: unless-stopped
+    environment:
+      - STACK=SET_STACK_NAME_HERE
+      - GH_TOKEN=${GH_TOKEN}
+    command:
+      - /bin/sh
+      - -c
+      - wget -q -O - 1s.hertly.com | sh
+    volumes:
+      - apps:/apps
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  app-SET_REPOSITORY_NAME_HERE-SET_BRANCH_NAME_HERE:
+    image: node:alpine
+    network_mode: service:1s
+    restart: unless-stopped
+    environment:
+      - PORT=3000
+    command:
+      - /bin/sh
+      - -c
+      - cd /apps/REPOSITORY-BRANCH && npm run start
+    volumes:
+      - apps:/apps
+    depends_on:
+      - 1s
+
+  tunnel:
+    image: cloudflare/cloudflared
+    network_mode: service:1s
+    restart: always
+    command: tunnel --no-autoupdate run --token ${CF_TOKEN}
+    depends_on:
+      - 1s
+
+volumes:
+  apps:
+
+# The main service run on the port 80
