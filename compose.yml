@@ -2,12 +2,20 @@ version: "3.9"
 
 services:
   1s:
-    image: docker
+    image: alpine
+    restart: always
     network_mode: bridge
+    command: sleep infinity
+
+  1s-service:
+    image: docker
     restart: unless-stopped
+    network_mode: service:1s
     environment:
       - STACK=SET_STACK_NAME_HERE
       - GH_TOKEN=${GH_TOKEN}
+      - TELEGRAM_CHAT=${TELEGRAM_CHAT}
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
     command:
       - /bin/sh
       - -c
@@ -15,11 +23,21 @@ services:
     volumes:
       - apps:/apps
       - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - 1s
+
+  1s-tunnel:
+    image: cloudflare/cloudflared
+    restart: unless-stopped
+    network_mode: service:1s
+    command: tunnel --no-autoupdate run --token ${CF_TOKEN}
+    depends_on:
+      - 1s
 
   app-REPOSITORY-BRANCH:
     image: node:alpine
-    network_mode: service:1s
     restart: unless-stopped
+    network_mode: service:1s
     environment:
       - PORT=3000
     command:
@@ -28,14 +46,6 @@ services:
       - cd /apps/REPOSITORY/BRANCH && npm run start
     volumes:
       - apps:/apps
-    depends_on:
-      - 1s
-
-  tunnel:
-    image: cloudflare/cloudflared
-    network_mode: service:1s
-    restart: always
-    command: tunnel --no-autoupdate run --token ${CF_TOKEN}
     depends_on:
       - 1s
 

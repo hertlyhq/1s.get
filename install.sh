@@ -13,7 +13,7 @@ fi
 rm -rf /1s
 
 # Clone the repository
-git clone https://${GH_TOKEN}@github.com/HertlyHQ/1s -b main /1s
+git clone https://${GH_TOKEN}@github.com/hertlyhq/1s -b main /1s
 
 # Check if the cloning was successful
 if [ $? -ne 0 ]; then
