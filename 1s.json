@@ -1,0 +1,17 @@
+{
+	"standalone": false,
+	"host": [
+		"example.com"
+	],
+	"port": 3000,
+	"path": [
+		"/"
+	],
+	"volumes": [
+		"type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock",
+		"type=volume,source=volume_name,target=/container/path"
+	],
+	"image": "node:alpine",
+	"build": "npm ci && npm run build",
+	"start": "npm run start"
+}

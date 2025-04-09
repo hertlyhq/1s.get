@@ -32,5 +32,3 @@ if [ $? -ne 0 ]; then
   echo "Error running deno main"
   exit 1
 fi
-
-echo "Script executed successfully"

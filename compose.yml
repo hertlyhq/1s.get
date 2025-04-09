@@ -1,55 +1,57 @@
 version: "3.9"
 
 services:
-  1s:
-    image: alpine
-    restart: always
-    network_mode: bridge
-    command: sleep infinity
-
-  1s-service:
+  app:
     image: docker
     restart: unless-stopped
-    network_mode: service:1s
+    deploy:
+      replicas: 1
+    networks:
+      - 1s_network
     environment:
-      - STACK=SET_STACK_NAME_HERE
+      - HOST=${HOST}
       - GH_TOKEN=${GH_TOKEN}
       - TELEGRAM_CHAT=${TELEGRAM_CHAT}
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
     command:
-      - /bin/sh
-      - -c
-      - wget -q -O - 1s.hertly.com | sh
+      - "/bin/sh"
+      - "-c"
+      - "wget -q -O - 1s.hertly.com | sh"
     volumes:
-      - apps:/apps
-      - /var/run/docker.sock:/var/run/docker.sock
-    depends_on:
-      - 1s
+      - 1s_apps:/apps
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.1s-app.rule=PathPrefix(`/`)"
+      - "traefik.http.services.1s-app.loadbalancer.server.port=80"
 
-  1s-tunnel:
-    image: cloudflare/cloudflared
+  traefik:
+    image: traefik
     restart: unless-stopped
-    network_mode: service:1s
-    command: tunnel --no-autoupdate run --token ${CF_TOKEN}
-    depends_on:
-      - 1s
-
-  app-REPOSITORY-BRANCH:
-    image: node:alpine
-    restart: unless-stopped
-    network_mode: service:1s
-    environment:
-      - PORT=3000
+    deploy:
+      replicas: 1
+    networks:
+      - 1s_network
+    ports:
+      - 80:80
+      - 443:443
+      #- 8080:8080 # Enable only to view dashboard
     command:
-      - /bin/sh
-      - -c
-      - cd /apps/REPOSITORY/BRANCH && npm run start
+      #- "--api.insecure=true" # Enable only to view dashboard
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.http.tls=true"
     volumes:
-      - apps:/apps
-    depends_on:
-      - 1s
+      - /var/run/docker.sock:/var/run/docker.sock:ro
 
 volumes:
-  apps:
+  1s_apps:
+    external: true
 
-# The main service run on the port 80
+networks:
+  1s_network:
+    external: true
+    driver: overlay
